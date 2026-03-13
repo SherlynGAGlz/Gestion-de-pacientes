@@ -1,0 +1,221 @@
+<div class="app-wrapper">
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-mark">⚕</div>
+      <div>
+        <h1 class="app-title">Gestión de Pacientes</h1>
+        <span class="app-subtitle">Sistema de Gestión de Pacientes</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="user-badge" *ngIf="currentUser">
+        <img [src]="currentUser.photoURL || 'https://ui-avatars.com/api/?name=' + currentUser.displayName"
+             class="user-avatar"
+             alt="avatar"
+             onerror="this.src='https://ui-avatars.com/api/?name=U'">
+        <div class="user-info">
+          <span class="user-name">{{ currentUser.displayName || currentUser.email }}</span>
+          <span class="user-role">Médico registrado</span>
+        </div>
+      </div>
+      <button class="btn-logout" (click)="logout()">
+        <span>⏻</span> Salir
+      </button>
+    </div>
+  </header>
+
+  <div class="main-content">
+
+    <!-- ===== STATS BAR ===== -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-number">{{ pacientes.length }}</span>
+        <span class="stat-label">Total pacientes</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-number">{{ filteredPacientes.length }}</span>
+        <span class="stat-label">Resultados</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-number">{{ currentPage }}/{{ totalPages }}</span>
+        <span class="stat-label">Página actual</span>
+      </div>
+    </div>
+
+    <!-- ===== FORMULARIO ===== -->
+    <div class="card form-card">
+      <div class="card-header-custom">
+        <h4>{{ editingId ? 'Editar Paciente' : 'Nuevo Paciente' }}</h4>
+      </div>
+
+      <div class="card-body-custom">
+        <form [formGroup]="pacienteForm" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+
+            <div class="field-group">
+              <label class="field-label">Nombre</label>
+              <input type="text" class="field-input" formControlName="nombre" placeholder="Ej. Juan"
+                     [class.error]="pacienteForm.get('nombre')?.invalid && pacienteForm.get('nombre')?.touched">
+              <span class="field-error" *ngIf="pacienteForm.get('nombre')?.errors?.['required'] && pacienteForm.get('nombre')?.touched">Requerido</span>
+              <span class="field-error" *ngIf="pacienteForm.get('nombre')?.errors?.['minlength'] && pacienteForm.get('nombre')?.touched">Mínimo 3 caracteres</span>
+              <span class="field-error" *ngIf="pacienteForm.get('nombre')?.errors?.['pattern'] && pacienteForm.get('nombre')?.touched">Solo letras</span>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Apellidos</label>
+              <input type="text" class="field-input" formControlName="apellidos" placeholder="Ej. García López"
+                     [class.error]="pacienteForm.get('apellidos')?.invalid && pacienteForm.get('apellidos')?.touched">
+              <span class="field-error" *ngIf="pacienteForm.get('apellidos')?.errors?.['required'] && pacienteForm.get('apellidos')?.touched">Requerido</span>
+              <span class="field-error" *ngIf="pacienteForm.get('apellidos')?.errors?.['pattern'] && pacienteForm.get('apellidos')?.touched">Solo letras y espacios</span>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Fecha de Nacimiento</label>
+              <input type="date" class="field-input" formControlName="fechaNacimiento"
+                     [class.error]="pacienteForm.get('fechaNacimiento')?.invalid && pacienteForm.get('fechaNacimiento')?.touched">
+              <span class="field-error" *ngIf="pacienteForm.get('fechaNacimiento')?.errors?.['required'] && pacienteForm.get('fechaNacimiento')?.touched">Requerida</span>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Correo Electrónico</label>
+              <input type="email" class="field-input" formControlName="correoElectronico" placeholder="correo@ejemplo.com"
+                     [class.error]="pacienteForm.get('correoElectronico')?.invalid && pacienteForm.get('correoElectronico')?.touched">
+              <span class="field-error" *ngIf="pacienteForm.get('correoElectronico')?.errors?.['required'] && pacienteForm.get('correoElectronico')?.touched">Requerido</span>
+              <span class="field-error" *ngIf="pacienteForm.get('correoElectronico')?.errors?.['email'] && pacienteForm.get('correoElectronico')?.touched">Correo inválido</span>
+            </div>
+
+            <div class="field-group field-full">
+              <label class="field-label">Domicilio</label>
+              <textarea class="field-input field-textarea" rows="2" formControlName="domicilio"
+                        placeholder="Calle, número, colonia, ciudad..."
+                        [class.error]="pacienteForm.get('domicilio')?.invalid && pacienteForm.get('domicilio')?.touched">
+              </textarea>
+              <span class="field-error" *ngIf="pacienteForm.get('domicilio')?.errors?.['required'] && pacienteForm.get('domicilio')?.touched">Requerido</span>
+            </div>
+
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary-action">
+              {{ editingId ? 'Actualizar' : 'Guardar Paciente' }}
+            </button>
+            <button type="button" class="btn-secondary-action" (click)="resetForm()" *ngIf="editingId">
+              ✕ Cancelar
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== BÚSQUEDA Y FILTROS ===== -->
+    <div class="search-filter-bar">
+      <div class="search-box">
+        <input type="text" class="search-input"
+               placeholder="Buscar por nombre, apellido o correo..."
+               [(ngModel)]="searchTerm"
+               (ngModelChange)="onSearch()"
+               [ngModelOptions]="{standalone: true}">
+        <button class="search-clear" *ngIf="searchTerm" (click)="clearSearch()">✕</button>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Ordenar por</label>
+        <select class="filter-select" [(ngModel)]="sortField" (ngModelChange)="onSort()" [ngModelOptions]="{standalone: true}">
+          <option value="nombre">Nombre</option>
+          <option value="apellidos">Apellidos</option>
+          <option value="fechaNacimiento">Fecha Nacimiento</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Orden</label>
+        <select class="filter-select" [(ngModel)]="sortOrder" (ngModelChange)="onSort()" [ngModelOptions]="{standalone: true}">
+          <option value="asc">A → Z</option>
+          <option value="desc">Z → A</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Por página</label>
+        <select class="filter-select" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()" [ngModelOptions]="{standalone: true}">
+          <option [value]="5">5</option>
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ===== TABLA ===== -->
+    <div class="card table-card">
+      <div class="card-header-custom">
+        <h4>Lista de Pacientes</h4>
+        <span class="results-badge">{{ filteredPacientes.length }} resultados</span>
+      </div>
+
+      <div class="card-body-custom">
+        <div class="table-wrapper">
+          <table class="patients-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Apellidos</th>
+                <th>Fecha Nac.</th>
+                <th>Domicilio</th>
+                <th>Correo</th>
+                <th class="text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let paciente of paginatedPacientes; let i = index" class="table-row">
+                <td class="row-number">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                <td><span class="name-chip">{{ paciente.nombre }}</span></td>
+                <td>{{ paciente.apellidos }}</td>
+                <td>{{ formatFecha(paciente.fechaNacimiento) | date:'dd/MM/yyyy' }}</td>
+                <td class="address-cell">{{ paciente.domicilio }}</td>
+                <td>
+                  <a [href]="'mailto:' + paciente.correoElectronico" class="email-link">
+                    {{ paciente.correoElectronico }}
+                  </a>
+                </td>
+                <td class="actions-cell">
+                  <button class="btn-edit" (click)="editPaciente(paciente)">Editar</button>
+                  <button class="btn-delete" (click)="deletePaciente(paciente.id)">Eliminar</button>
+                </td>
+              </tr>
+
+              <tr *ngIf="filteredPacientes.length === 0">
+                <td colspan="7" class="empty-state">
+                  <p>{{ searchTerm ? 'Sin resultados para "' + searchTerm + '"' : 'No hay pacientes registrados.' }}</p>
+                  <button *ngIf="searchTerm" class="btn-secondary-action" (click)="clearSearch()">Limpiar búsqueda</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ===== PAGINACIÓN ===== -->
+        <div class="pagination-bar" *ngIf="totalPages > 1">
+          <button class="page-btn" (click)="goToPage(1)" [disabled]="currentPage === 1">«</button>
+          <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹</button>
+          <button class="page-btn"
+                  *ngFor="let page of getPageNumbers()"
+                  [class.active]="page === currentPage"
+                  (click)="goToPage(page)">
+            {{ page }}
+          </button>
+          <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">›</button>
+          <button class="page-btn" (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages">»</button>
+          <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
